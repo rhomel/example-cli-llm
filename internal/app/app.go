@@ -113,6 +113,9 @@ func (a Application) Run(ctx context.Context, args []string) error {
 	if selectMode {
 		answer, err = selectAnswer(answers, a.Stdin, a.Stderr)
 		if err != nil {
+			if errors.Is(err, tui.ErrCancelled) {
+				return ExitError{Code: 130}
+			}
 			return ExitError{Code: 2, Err: err}
 		}
 	}
