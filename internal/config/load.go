@@ -108,7 +108,8 @@ func (l Loader) configPaths() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve home dir: %w", err)
 	}
-	if xdg, ok := l.LookupEnv("XDG_CONFIG_HOME"); ok && strings.TrimSpace(xdg) != "" {
+	xdg, ok := l.LookupEnv("XDG_CONFIG_HOME")
+	if ok && strings.TrimSpace(xdg) != "" {
 		return []string{
 			filepath.Join(strings.TrimSpace(xdg), "example-cli-llm", "settings.json"),
 			filepath.Join(homeDir, ".config", "example-cli-llm", "settings.json"),
@@ -178,7 +179,8 @@ func applyEnvOverrides(profile ProfileSettings, lookupEnv func(string) (string, 
 	}
 	if value, ok := lookupEnv(envSystemPrompt); ok && strings.TrimSpace(value) != "" {
 		method := "replace"
-		if envMethod, ok := lookupEnv(envSystemPromptMethod); ok && strings.TrimSpace(envMethod) != "" {
+		envMethod, ok := lookupEnv(envSystemPromptMethod)
+		if ok && strings.TrimSpace(envMethod) != "" {
 			method = envMethod
 		}
 		profile.SystemPrompt = []SystemPromptPatch{{
@@ -191,7 +193,8 @@ func applyEnvOverrides(profile ProfileSettings, lookupEnv func(string) (string, 
 
 func firstEnv(lookupEnv func(string) (string, bool), keys ...string) string {
 	for _, key := range keys {
-		if value, ok := lookupEnv(key); ok && strings.TrimSpace(value) != "" {
+		value, ok := lookupEnv(key)
+		if ok && strings.TrimSpace(value) != "" {
 			return value
 		}
 	}

@@ -78,10 +78,11 @@ func (c Client) Complete(ctx context.Context, req Request) ([]string, error) {
 			Error map[string]interface{} `json:"error"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&apiErr)
-		if message, ok := apiErr.Error["message"].(string); ok && message != "" {
-			return nil, fmt.Errorf("chat completions request failed: %s", message)
+		message, _ := apiErr.Error["message"].(string)
+		if message == "" {
+			return nil, fmt.Errorf("chat completions request failed: status %s", resp.Status)
 		}
-		return nil, fmt.Errorf("chat completions request failed: status %s", resp.Status)
+		return nil, fmt.Errorf("chat completions request failed: %s", message)
 	}
 
 	var payloadResp struct {
@@ -126,10 +127,11 @@ func (c Client) discoverModel(ctx context.Context, baseURL, apiKey string) (stri
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		if trimmed := strings.TrimSpace(string(body)); trimmed != "" {
-			return "", fmt.Errorf("discover model: status %s: %s", resp.Status, trimmed)
+		trimmed := strings.TrimSpace(string(body))
+		if trimmed == "" {
+			return "", fmt.Errorf("discover model: status %s", resp.Status)
 		}
-		return "", fmt.Errorf("discover model: status %s", resp.Status)
+		return "", fmt.Errorf("discover model: status %s: %s", resp.Status, trimmed)
 	}
 
 	var payload struct {
@@ -141,9 +143,11 @@ func (c Client) discoverModel(ctx context.Context, baseURL, apiKey string) (stri
 		return "", fmt.Errorf("decode model discovery response: %w", err)
 	}
 	for _, model := range payload.Data {
-		if id := strings.TrimSpace(model.ID); id != "" {
-			return id, nil
+		id := strings.TrimSpace(model.ID)
+		if id == "" {
+			continue
 		}
+		return id, nil
 	}
 	return "", fmt.Errorf("discover model: no models returned")
 }

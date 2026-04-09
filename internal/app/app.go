@@ -150,10 +150,13 @@ func readPrompt(args []string, stdin io.Reader, stdout io.Writer) (string, error
 }
 
 func selectAnswer(answers []string, stdin io.Reader, stderr io.Writer) (string, error) {
-	if file, ok := stdin.(*os.File); ok {
-		if selected, err := selectAnswerInteractive(answers, file, stderr); err == nil {
-			return selected, nil
-		}
+	file, ok := stdin.(*os.File)
+	if !ok {
+		return selectAnswerNumeric(answers, stdin, stderr)
+	}
+	selected, err := selectAnswerInteractive(answers, file, stderr)
+	if err == nil {
+		return selected, nil
 	}
 	return selectAnswerNumeric(answers, stdin, stderr)
 }
