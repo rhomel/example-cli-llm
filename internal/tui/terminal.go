@@ -38,7 +38,7 @@ func SelectList(input *os.File, output io.Writer, items []string) (string, error
 	defer cleanup()
 
 	model := NewListModel(items)
-	if err := render(output, model.View()); err != nil {
+	if err := render(output, input, model.View()); err != nil {
 		return "", err
 	}
 
@@ -55,15 +55,16 @@ func SelectList(input *os.File, output io.Writer, items []string) (string, error
 		case ActionCancel:
 			return "", ErrCancelled
 		default:
-			if err := render(output, model.View()); err != nil {
+			if err := render(output, input, model.View()); err != nil {
 				return "", err
 			}
 		}
 	}
 }
 
-func render(output io.Writer, view string) error {
-	_, err := fmt.Fprint(output, ansiCursorHome, ansiClearScreen, view)
+func render(output io.Writer, tty *os.File, view string) error {
+	height := terminalHeight(tty)
+	_, err := fmt.Fprint(output, ansiCursorHome, ansiClearScreen, padViewToBottom(view, height))
 	return err
 }
 
@@ -119,4 +120,21 @@ func writeTermios(fd uintptr, termios *syscall.Termios) error {
 		return errno
 	}
 	return nil
+}
+
+func terminalHeight(file *os.File) int {
+	if file == nil {
+		return 0
+	}
+	ws := &struct {
+		Rows uint16
+		Cols uint16
+		X    uint16
+		Y    uint16
+	}{}
+	_, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, file.Fd(), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)), 0, 0, 0)
+	if errno != 0 {
+		return 0
+	}
+	return int(ws.Rows)
 }

@@ -50,8 +50,6 @@ func (m ListModel) Selected() string {
 
 func (m ListModel) View() string {
 	var b strings.Builder
-	b.WriteString("example\n")
-	b.WriteString("\n")
 	for i, item := range m.items {
 		cursor := " "
 		line := item
@@ -68,4 +66,19 @@ func (m ListModel) View() string {
 
 func inverse(value string) string {
 	return "\x1b[7m" + value + "\x1b[0m"
+}
+
+func padViewToBottom(view string, height int) string {
+	if height <= 0 {
+		return view
+	}
+	lineCount := strings.Count(view, "\n")
+	if !strings.HasSuffix(view, "\n") {
+		lineCount++
+	}
+	padding := height - lineCount
+	if padding <= 0 {
+		return view
+	}
+	return strings.Repeat("\n", padding) + view
 }

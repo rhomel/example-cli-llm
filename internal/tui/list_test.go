@@ -42,7 +42,7 @@ func TestListModelViewRendersSingleSelection(t *testing.T) {
 	model.Update(KeyDown)
 
 	view := model.View()
-	if !strings.Contains(view, "example\n") {
+	if strings.Contains(view, "example\n") {
 		t.Fatalf("view = %q", view)
 	}
 	if !strings.Contains(view, "> \x1b[7mtwo\x1b[0m") {
@@ -50,5 +50,16 @@ func TestListModelViewRendersSingleSelection(t *testing.T) {
 	}
 	if strings.Count(view, "\x1b[7m") != 1 {
 		t.Fatalf("view = %q", view)
+	}
+}
+
+func TestPadViewToBottom(t *testing.T) {
+	t.Parallel()
+
+	view := "a\nb\n"
+	got := padViewToBottom(view, 5)
+
+	if got != "\n\n\na\nb\n" {
+		t.Fatalf("padViewToBottom() = %q", got)
 	}
 }
