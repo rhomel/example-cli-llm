@@ -10,12 +10,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
-	"unsafe"
 
 	"github.com/rhomel/example-cli-llm/internal/chat"
 	"github.com/rhomel/example-cli-llm/internal/config"
 	"github.com/rhomel/example-cli-llm/internal/systemprompt"
+	"github.com/rhomel/example-cli-llm/internal/tui"
 )
 
 type ExitError struct {
@@ -154,58 +153,14 @@ func selectAnswer(answers []string, stdin io.Reader, stderr io.Writer) (string, 
 	if !ok {
 		return selectAnswerNumeric(answers, stdin, stderr)
 	}
-	selected, err := selectAnswerInteractive(answers, file, stderr)
+	selected, err := tui.SelectList(file, stderr, answers)
 	if err == nil {
 		return selected, nil
 	}
+	if errors.Is(err, tui.ErrCancelled) {
+		return "", err
+	}
 	return selectAnswerNumeric(answers, stdin, stderr)
-}
-
-func selectAnswerInteractive(answers []string, stdin *os.File, stderr io.Writer) (string, error) {
-	if len(answers) == 0 {
-		return "", errors.New("no answers available to select")
-	}
-	state, err := makeRaw(stdin)
-	if err != nil {
-		return "", err
-	}
-	defer restoreTerminal(stdin, state)
-
-	selected := 0
-	if err := renderSelection(stderr, answers, selected); err != nil {
-		return "", err
-	}
-
-	var buf [3]byte
-	for {
-		n, err := stdin.Read(buf[:])
-		if err != nil {
-			return "", err
-		}
-		if n == 0 {
-			continue
-		}
-		switch {
-		case buf[0] == '\r' || buf[0] == '\n':
-			if _, err := fmt.Fprint(stderr, "\n"); err != nil {
-				return "", err
-			}
-			return answers[selected], nil
-		case buf[0] == 'j':
-			selected = (selected + 1) % len(answers)
-		case buf[0] == 'k':
-			selected = (selected - 1 + len(answers)) % len(answers)
-		case n >= 3 && buf[0] == 27 && buf[1] == 91 && buf[2] == 65:
-			selected = (selected - 1 + len(answers)) % len(answers)
-		case n >= 3 && buf[0] == 27 && buf[1] == 91 && buf[2] == 66:
-			selected = (selected + 1) % len(answers)
-		default:
-			continue
-		}
-		if err := renderSelection(stderr, answers, selected); err != nil {
-			return "", err
-		}
-	}
 }
 
 func selectAnswerNumeric(answers []string, stdin io.Reader, stderr io.Writer) (string, error) {
@@ -235,68 +190,4 @@ func selectAnswerNumeric(answers []string, stdin io.Reader, stderr io.Writer) (s
 func writeLine(w io.Writer, value string) error {
 	_, err := fmt.Fprintln(w, value)
 	return err
-}
-
-func renderSelection(stderr io.Writer, answers []string, selected int) error {
-	if _, err := fmt.Fprint(stderr, "\x1b[H\x1b[2J"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(stderr, "select with arrow keys or j/k, press enter"); err != nil {
-		return err
-	}
-	for i, answer := range answers {
-		prefix := "  "
-		if i == selected {
-			prefix = "> "
-		}
-		if _, err := fmt.Fprintf(stderr, "%s%s\n", prefix, answer); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-type terminalState struct {
-	value syscall.Termios
-}
-
-func makeRaw(file *os.File) (*terminalState, error) {
-	termios, err := readTermios(file.Fd())
-	if err != nil {
-		return nil, err
-	}
-	state := &terminalState{value: *termios}
-	raw := *termios
-	raw.Lflag &^= syscall.ICANON | syscall.ECHO
-	raw.Iflag &^= syscall.ICRNL | syscall.INLCR | syscall.IXON
-	raw.Cc[syscall.VMIN] = 1
-	raw.Cc[syscall.VTIME] = 0
-	if err := writeTermios(file.Fd(), &raw); err != nil {
-		return nil, err
-	}
-	return state, nil
-}
-
-func restoreTerminal(file *os.File, state *terminalState) {
-	if state == nil {
-		return
-	}
-	_ = writeTermios(file.Fd(), &state.value)
-}
-
-func readTermios(fd uintptr) (*syscall.Termios, error) {
-	termios := &syscall.Termios{}
-	_, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, fd, uintptr(syscall.TCGETS), uintptr(unsafe.Pointer(termios)), 0, 0, 0)
-	if errno != 0 {
-		return nil, errno
-	}
-	return termios, nil
-}
-
-func writeTermios(fd uintptr, termios *syscall.Termios) error {
-	_, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, fd, uintptr(syscall.TCSETS), uintptr(unsafe.Pointer(termios)), 0, 0, 0)
-	if errno != 0 {
-		return errno
-	}
-	return nil
 }
