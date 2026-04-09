@@ -51,6 +51,9 @@ func TestRunWritesShellHelper(t *testing.T) {
 	if !strings.Contains(stdout.String(), `ef() { print -z "$(example -s "$@")" }`) {
 		t.Fatalf("stdout = %q", stdout.String())
 	}
+	if !strings.Contains(stdout.String(), `alias ee='example'`) {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
 }
 
 func TestRunReadsPromptFromArgsAndWritesAnswer(t *testing.T) {

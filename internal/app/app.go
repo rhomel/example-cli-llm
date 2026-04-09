@@ -126,7 +126,7 @@ func (a Application) Run(ctx context.Context, args []string) error {
 func (a Application) writeShellHelper(shell string) error {
 	switch strings.ToLower(strings.TrimSpace(shell)) {
 	case "zsh":
-		return writeLine(a.Stdout, "# add to .zshrc to create 'ef' alias\nef() { print -z \"$(example -s \"$@\")\" }")
+		return writeLine(a.Stdout, "# add to .zshrc to create 'ef' and 'ee' aliases\nef() { print -z \"$(example -s \"$@\")\" }\nalias ee='example'")
 	default:
 		return ExitError{Code: 2, Err: fmt.Errorf("unsupported shell helper: %s", shell)}
 	}
