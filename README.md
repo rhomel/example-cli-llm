@@ -190,11 +190,11 @@ Replace the built-in system prompt with a custom prompt:
 ```
 {
   "default": {
-      "system_prompt": [
-        {
-          "method": "replace",
-          "content": "You're a terse and helpful CLI tool example provider..."
-        }
+    "system_prompt": [
+      {
+        "method": "replace",
+        "content": "You're a terse and helpful CLI tool example provider..."
+      }
     ]
   }
 }
