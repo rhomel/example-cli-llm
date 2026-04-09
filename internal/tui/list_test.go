@@ -63,3 +63,13 @@ func TestPadViewToBottom(t *testing.T) {
 		t.Fatalf("padViewToBottom() = %q", got)
 	}
 }
+
+func TestTerminalLinesUsesCRLF(t *testing.T) {
+	t.Parallel()
+
+	got := terminalLines("a\nb\n")
+
+	if got != "a\r\nb\r\n" {
+		t.Fatalf("terminalLines() = %q", got)
+	}
+}

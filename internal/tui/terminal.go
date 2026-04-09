@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"syscall"
-	"unsafe"
+	"strings"
+
+	"golang.org/x/term"
 )
 
 const (
@@ -64,7 +65,7 @@ func SelectList(input *os.File, output io.Writer, items []string) (string, error
 
 func render(output io.Writer, tty *os.File, view string) error {
 	height := terminalHeight(tty)
-	_, err := fmt.Fprint(output, ansiCursorHome, ansiClearScreen, padViewToBottom(view, height))
+	_, err := fmt.Fprint(output, ansiCursorHome, ansiClearScreen, terminalLines(padViewToBottom(view, height)))
 	return err
 }
 
@@ -77,64 +78,30 @@ func enterScreen(output io.Writer) (func(), error) {
 	}, nil
 }
 
-type terminalState struct {
-	value syscall.Termios
-}
+type terminalState = term.State
 
 func makeRaw(file *os.File) (*terminalState, error) {
-	termios, err := readTermios(file.Fd())
-	if err != nil {
-		return nil, err
-	}
-	state := &terminalState{value: *termios}
-	raw := *termios
-	raw.Lflag &^= syscall.ICANON | syscall.ECHO
-	raw.Iflag &^= syscall.ICRNL | syscall.INLCR | syscall.IXON
-	raw.Cc[syscall.VMIN] = 1
-	raw.Cc[syscall.VTIME] = 0
-	if err := writeTermios(file.Fd(), &raw); err != nil {
-		return nil, err
-	}
-	return state, nil
+	return term.MakeRaw(int(file.Fd()))
 }
 
 func restoreTerminal(file *os.File, state *terminalState) {
 	if state == nil {
 		return
 	}
-	_ = writeTermios(file.Fd(), &state.value)
-}
-
-func readTermios(fd uintptr) (*syscall.Termios, error) {
-	termios := &syscall.Termios{}
-	_, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, fd, uintptr(syscall.TCGETS), uintptr(unsafe.Pointer(termios)), 0, 0, 0)
-	if errno != 0 {
-		return nil, errno
-	}
-	return termios, nil
-}
-
-func writeTermios(fd uintptr, termios *syscall.Termios) error {
-	_, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, fd, uintptr(syscall.TCSETS), uintptr(unsafe.Pointer(termios)), 0, 0, 0)
-	if errno != 0 {
-		return errno
-	}
-	return nil
+	_ = term.Restore(int(file.Fd()), state)
 }
 
 func terminalHeight(file *os.File) int {
 	if file == nil {
 		return 0
 	}
-	ws := &struct {
-		Rows uint16
-		Cols uint16
-		X    uint16
-		Y    uint16
-	}{}
-	_, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, file.Fd(), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(ws)), 0, 0, 0)
-	if errno != 0 {
+	_, height, err := term.GetSize(int(file.Fd()))
+	if err != nil {
 		return 0
 	}
-	return int(ws.Rows)
+	return height
+}
+
+func terminalLines(value string) string {
+	return strings.ReplaceAll(value, "\n", "\r\n")
 }
