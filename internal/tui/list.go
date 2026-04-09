@@ -54,13 +54,13 @@ func (m ListModel) View() string {
 		cursor := " "
 		line := item
 		if i == m.selected {
-			cursor = ">"
+			cursor = "»"
 			line = inverse(line)
 		}
 		b.WriteString(fmt.Sprintf("%s %s\n", cursor, line))
 	}
 	b.WriteString("\n")
-	b.WriteString("enter accept  ctrl-c cancel  j/k or arrows move")
+	b.WriteString("↑/↓ or j/k to navigate, ↵ select")
 	return b.String()
 }
 

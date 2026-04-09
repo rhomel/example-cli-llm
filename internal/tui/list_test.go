@@ -45,7 +45,7 @@ func TestListModelViewRendersSingleSelection(t *testing.T) {
 	if strings.Contains(view, "example\n") {
 		t.Fatalf("view = %q", view)
 	}
-	if !strings.Contains(view, "> \x1b[7mtwo\x1b[0m") {
+	if !strings.Contains(view, "» \x1b[7mtwo\x1b[0m") {
 		t.Fatalf("view = %q", view)
 	}
 	if strings.Count(view, "\x1b[7m") != 1 {
