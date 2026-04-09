@@ -145,7 +145,9 @@ Example minimal configuration (e.g. litellm proxy):
 Optional select-mode tuning can also be set in `settings.json`. `choices`
 controls how many completions are requested with `--select`, and
 `temperature` controls how diverse those completions should be. If omitted,
-they default to `3` and `0.9`.
+they default to `3` and `0.9`. `choices_as_system_prompt` is off by default
+and works around APIs that ignore multi-choice requests by asking for multiple
+options in a single response and then splitting them by line for selection.
 
 ```
 {
@@ -154,7 +156,8 @@ they default to `3` and `0.9`.
     "api_key": "api-key",
     "api_base_url": "http://localhost:4000",
     "choices": 3,
-    "temperature": 0.9
+    "temperature": 0.9,
+    "choices_as_system_prompt": true
   }
 }
 ```

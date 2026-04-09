@@ -6,12 +6,13 @@ type Settings struct {
 }
 
 type ProfileSettings struct {
-	Model        string              `json:"model"`
-	APIKey       string              `json:"api_key"`
-	APIBaseURL   string              `json:"api_base_url"`
-	Choices      *int                `json:"choices"`
-	Temperature  *float64            `json:"temperature"`
-	SystemPrompt []SystemPromptPatch `json:"system_prompt"`
+	Model                 string              `json:"model"`
+	APIKey                string              `json:"api_key"`
+	APIBaseURL            string              `json:"api_base_url"`
+	Choices               *int                `json:"choices"`
+	Temperature           *float64            `json:"temperature"`
+	ChoicesAsSystemPrompt *bool               `json:"choices_as_system_prompt"`
+	SystemPrompt          []SystemPromptPatch `json:"system_prompt"`
 }
 
 type SystemPromptPatch struct {
@@ -21,10 +22,11 @@ type SystemPromptPatch struct {
 }
 
 type Runtime struct {
-	Model        string
-	APIKey       string
-	APIBaseURL   string
-	Choices      int
-	Temperature  float64
-	SystemPrompt []SystemPromptPatch
+	Model                 string
+	APIKey                string
+	APIBaseURL            string
+	Choices               int
+	Temperature           float64
+	ChoicesAsSystemPrompt bool
+	SystemPrompt          []SystemPromptPatch
 }

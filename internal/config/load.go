@@ -52,12 +52,13 @@ func (l Loader) Resolve(ctx context.Context, profile string) (Runtime, error) {
 	resolved = applyEnvOverrides(resolved, l.LookupEnv)
 
 	runtime := Runtime{
-		Model:        strings.TrimSpace(resolved.Model),
-		APIKey:       strings.TrimSpace(resolved.APIKey),
-		APIBaseURL:   strings.TrimRight(strings.TrimSpace(resolved.APIBaseURL), "/"),
-		Choices:      resolveChoices(resolved.Choices),
-		Temperature:  resolveTemperature(resolved.Temperature),
-		SystemPrompt: resolved.SystemPrompt,
+		Model:                 strings.TrimSpace(resolved.Model),
+		APIKey:                strings.TrimSpace(resolved.APIKey),
+		APIBaseURL:            strings.TrimRight(strings.TrimSpace(resolved.APIBaseURL), "/"),
+		Choices:               resolveChoices(resolved.Choices),
+		Temperature:           resolveTemperature(resolved.Temperature),
+		ChoicesAsSystemPrompt: resolveChoicesAsSystemPrompt(resolved.ChoicesAsSystemPrompt),
+		SystemPrompt:          resolved.SystemPrompt,
 	}
 	if err := validateRuntime(runtime); err != nil {
 		return Runtime{}, err
@@ -157,6 +158,7 @@ func (s Settings) ModelPresent() bool {
 		s.Default.APIBaseURL != "" ||
 		s.Default.Choices != nil ||
 		s.Default.Temperature != nil ||
+		s.Default.ChoicesAsSystemPrompt != nil ||
 		len(s.Default.SystemPrompt) > 0 ||
 		len(s.Profiles) > 0
 }
@@ -179,6 +181,10 @@ func mergeProfile(base, overlay ProfileSettings, replaceSystemPrompt bool) Profi
 		value := *overlay.Temperature
 		base.Temperature = &value
 	}
+	if overlay.ChoicesAsSystemPrompt != nil {
+		value := *overlay.ChoicesAsSystemPrompt
+		base.ChoicesAsSystemPrompt = &value
+	}
 	if replaceSystemPrompt && len(overlay.SystemPrompt) > 0 {
 		base.SystemPrompt = append([]SystemPromptPatch(nil), overlay.SystemPrompt...)
 	}
@@ -197,6 +203,10 @@ func resolveTemperature(value *float64) float64 {
 		return defaultTemperature
 	}
 	return *value
+}
+
+func resolveChoicesAsSystemPrompt(value *bool) bool {
+	return value != nil && *value
 }
 
 func applyEnvOverrides(profile ProfileSettings, lookupEnv func(string) (string, bool)) ProfileSettings {

@@ -30,7 +30,9 @@ func (e ExitError) Error() string {
 }
 
 type Application struct {
-	ConfigLoader  interface{ Resolve(context.Context, string) (config.Runtime, error) }
+	ConfigLoader interface {
+		Resolve(context.Context, string) (config.Runtime, error)
+	}
 	PromptBuilder interface {
 		Build(context.Context, string, []config.SystemPromptPatch) (string, error)
 	}
@@ -97,6 +99,14 @@ func (a Application) Run(ctx context.Context, args []string) error {
 	if selectMode {
 		n = runtime.Choices
 		temperature = runtime.Temperature
+		if runtime.ChoicesAsSystemPrompt {
+			systemPrompt = applyChoicesMode(systemPrompt, runtime.Choices)
+			n = 1
+		} else {
+			systemPrompt = applyChoicesMode(systemPrompt, 0)
+		}
+	} else {
+		systemPrompt = applyChoicesMode(systemPrompt, 0)
 	}
 
 	answers, err := a.ChatClient.Complete(ctx, chat.Request{
@@ -110,6 +120,9 @@ func (a Application) Run(ctx context.Context, args []string) error {
 	})
 	if err != nil {
 		return err
+	}
+	if selectMode && runtime.ChoicesAsSystemPrompt {
+		answers = splitChoicesLines(answers)
 	}
 
 	answer := answers[0]
@@ -196,4 +209,29 @@ func selectAnswerNumeric(answers []string, stdin io.Reader, stderr io.Writer) (s
 func writeLine(w io.Writer, value string) error {
 	_, err := fmt.Fprintln(w, value)
 	return err
+}
+
+func applyChoicesMode(systemPrompt string, n int) string {
+	replacement := ""
+	if n > 0 {
+		replacement = fmt.Sprintf("You are in multiple option mode: provide at least %d options one per a line.", n)
+	}
+	return strings.ReplaceAll(systemPrompt, "<choices-mode>", replacement)
+}
+
+func splitChoicesLines(answers []string) []string {
+	var split []string
+	for _, answer := range answers {
+		for _, line := range strings.Split(answer, "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			split = append(split, line)
+		}
+	}
+	if len(split) == 0 {
+		return answers
+	}
+	return split
 }

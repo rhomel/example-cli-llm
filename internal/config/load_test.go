@@ -69,12 +69,14 @@ func TestResolveAppliesProfileOverlay(t *testing.T) {
 				"api_base_url": "http://base",
 				"choices": 5,
 				"temperature": 0.7,
+				"choices_as_system_prompt": false,
 				"system_prompt": [{"method":"append","content":"base"}]
 			},
 			"profiles": {
 				"smart": {
 					"model": "smart-model",
-					"choices": 4
+					"choices": 4,
+					"choices_as_system_prompt": true
 				}
 			}
 		}`), nil
@@ -93,6 +95,9 @@ func TestResolveAppliesProfileOverlay(t *testing.T) {
 	}
 	if runtime.Choices != 4 || runtime.Temperature != 0.7 {
 		t.Fatalf("unexpected select config: %+v", runtime)
+	}
+	if !runtime.ChoicesAsSystemPrompt {
+		t.Fatalf("ChoicesAsSystemPrompt = %v, want true", runtime.ChoicesAsSystemPrompt)
 	}
 	if len(runtime.SystemPrompt) != 1 || runtime.SystemPrompt[0].Content != "base" {
 		t.Fatalf("system prompt inheritance failed: %+v", runtime.SystemPrompt)
@@ -122,6 +127,9 @@ func TestResolveAppliesDefaultSelectSettingsWhenOmitted(t *testing.T) {
 	}
 	if runtime.Temperature != 0.9 {
 		t.Fatalf("Temperature = %v, want 0.9", runtime.Temperature)
+	}
+	if runtime.ChoicesAsSystemPrompt {
+		t.Fatalf("ChoicesAsSystemPrompt = %v, want false", runtime.ChoicesAsSystemPrompt)
 	}
 }
 
