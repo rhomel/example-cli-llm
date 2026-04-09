@@ -119,6 +119,17 @@ export EXAMLE_CLI_CONFIG_COMMAND="jq '{default: {model: .model}}' $HOME/.claude/
 
 ## settings.json Format
 
+Example minimal configuration for locally hosted server (e.g. llama.cpp
+llama-server):
+
+```
+{
+  "default": {
+    "api_base_url": "http://localhost:8080"
+  }
+}
+```
+
 Example minimal configuration (e.g. litellm proxy):
 
 ```

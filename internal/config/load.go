@@ -200,12 +200,6 @@ func firstEnv(lookupEnv func(string) (string, bool), keys ...string) string {
 
 func validateRuntime(runtime Runtime) error {
 	var missing []string
-	if runtime.Model == "" {
-		missing = append(missing, envModel+" or settings.default.model")
-	}
-	if runtime.APIKey == "" {
-		missing = append(missing, envAPIKey+" or settings.default.api_key")
-	}
 	if runtime.APIBaseURL == "" {
 		missing = append(missing, envAPIBaseURL+" or settings.default.api_base_url")
 	}

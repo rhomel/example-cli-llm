@@ -167,6 +167,32 @@ func TestResolveReportsMissingConfiguration(t *testing.T) {
 	}
 }
 
+func TestResolveAllowsLocalServerConfigWithOnlyBaseURL(t *testing.T) {
+	t.Parallel()
+
+	loader := NewLoader()
+	loader.LookupEnv = func(string) (string, bool) { return "", false }
+	loader.HomeDir = func() (string, error) { return "/tmp/none", nil }
+	loader.ReadFile = func(string) ([]byte, error) {
+		return []byte(`{
+			"default": {
+				"api_base_url": "http://localhost:8080"
+			}
+		}`), nil
+	}
+
+	runtime, err := loader.Resolve(context.Background(), "")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if runtime.APIBaseURL != "http://localhost:8080" {
+		t.Fatalf("APIBaseURL = %q", runtime.APIBaseURL)
+	}
+	if runtime.Model != "" || runtime.APIKey != "" {
+		t.Fatalf("unexpected local-server defaults: %+v", runtime)
+	}
+}
+
 func TestResolvePropagatesFileReadErrors(t *testing.T) {
 	t.Parallel()
 

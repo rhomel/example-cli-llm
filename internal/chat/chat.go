@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -33,8 +34,16 @@ func (c Client) Complete(ctx context.Context, req Request) ([]string, error) {
 	if c.HTTPClient == nil {
 		c.HTTPClient = &http.Client{Timeout: 60 * time.Second}
 	}
+	model := strings.TrimSpace(req.Model)
+	if model == "" {
+		discovered, err := c.discoverModel(ctx, req.BaseURL, req.APIKey)
+		if err != nil {
+			return nil, err
+		}
+		model = discovered
+	}
 	payload := map[string]interface{}{
-		"model": req.Model,
+		"model": model,
 		"messages": []map[string]string{
 			{"role": "system", "content": req.SystemPrompt},
 			{"role": "user", "content": req.UserPrompt},
@@ -53,7 +62,9 @@ func (c Client) Complete(ctx context.Context, req Request) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
-	httpReq.Header.Set("Authorization", "Bearer "+req.APIKey)
+	if strings.TrimSpace(req.APIKey) != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+req.APIKey)
+	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.HTTPClient.Do(httpReq)
@@ -96,4 +107,43 @@ func (c Client) Complete(ctx context.Context, req Request) ([]string, error) {
 		return nil, fmt.Errorf("chat completions response contained no choices")
 	}
 	return results, nil
+}
+
+func (c Client) discoverModel(ctx context.Context, baseURL, apiKey string) (string, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(baseURL, "/")+"/models", nil)
+	if err != nil {
+		return "", fmt.Errorf("create model discovery request: %w", err)
+	}
+	if strings.TrimSpace(apiKey) != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+
+	resp, err := c.HTTPClient.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("discover model: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		if trimmed := strings.TrimSpace(string(body)); trimmed != "" {
+			return "", fmt.Errorf("discover model: status %s: %s", resp.Status, trimmed)
+		}
+		return "", fmt.Errorf("discover model: status %s", resp.Status)
+	}
+
+	var payload struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return "", fmt.Errorf("decode model discovery response: %w", err)
+	}
+	for _, model := range payload.Data {
+		if id := strings.TrimSpace(model.ID); id != "" {
+			return id, nil
+		}
+	}
+	return "", fmt.Errorf("discover model: no models returned")
 }

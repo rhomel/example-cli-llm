@@ -52,6 +52,82 @@ func TestCompleteSendsLiteLLMCompatibleRequest(t *testing.T) {
 	}
 }
 
+func TestCompleteDiscoversModelWhenMissingAndAllowsNoAPIKey(t *testing.T) {
+	t.Parallel()
+
+	var sawEmptyAuth bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/models":
+			if got := r.Header.Get("Authorization"); got != "" {
+				t.Fatalf("unexpected authorization during discovery: %q", got)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"data":[{"id":"local-model"}]}`))
+		case "/chat/completions":
+			if got := r.Header.Get("Authorization"); got != "" {
+				t.Fatalf("unexpected authorization for local request: %q", got)
+			}
+			sawEmptyAuth = true
+			var payload map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode request: %v", err)
+			}
+			if payload["model"] != "local-model" {
+				t.Fatalf("model = %v, want local-model", payload["model"])
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"answer"}}]}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	got, err := client.Complete(context.Background(), Request{
+		BaseURL:      server.URL,
+		Model:        "",
+		APIKey:       "",
+		SystemPrompt: "system",
+		UserPrompt:   "user",
+		N:            1,
+	})
+	if err != nil {
+		t.Fatalf("Complete() error = %v", err)
+	}
+	if !sawEmptyAuth {
+		t.Fatal("chat/completions was not called")
+	}
+	if len(got) != 1 || got[0] != "answer" {
+		t.Fatalf("Complete() = %#v", got)
+	}
+}
+
+func TestCompleteReturnsDiscoveryErrorWhenNoModelConfiguredOrExposed(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/models" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	_, err := client.Complete(context.Background(), Request{
+		BaseURL:      server.URL,
+		SystemPrompt: "system",
+		UserPrompt:   "user",
+		N:            1,
+	})
+	if err == nil || err.Error() != "discover model: no models returned" {
+		t.Fatalf("Complete() error = %v", err)
+	}
+}
+
 func TestCompleteHandlesSingleChoiceWithoutN(t *testing.T) {
 	t.Parallel()
 
