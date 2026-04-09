@@ -19,6 +19,8 @@ const (
 	envConfigCommandTypo  = "EXAMLE_CLI_CONFIG_COMMAND"
 	envSystemPrompt       = "EXAMPLE_CLI_SYSTEM_PROMPT_CONTENT"
 	envSystemPromptMethod = "EXAMPLE_CLI_SYSTEM_PROMPT_METHOD"
+	defaultChoices        = 3
+	defaultTemperature    = 0.9
 )
 
 type Loader struct {
@@ -53,6 +55,8 @@ func (l Loader) Resolve(ctx context.Context, profile string) (Runtime, error) {
 		Model:        strings.TrimSpace(resolved.Model),
 		APIKey:       strings.TrimSpace(resolved.APIKey),
 		APIBaseURL:   strings.TrimRight(strings.TrimSpace(resolved.APIBaseURL), "/"),
+		Choices:      resolveChoices(resolved.Choices),
+		Temperature:  resolveTemperature(resolved.Temperature),
 		SystemPrompt: resolved.SystemPrompt,
 	}
 	if err := validateRuntime(runtime); err != nil {
@@ -148,7 +152,13 @@ func mergeSettings(base, overlay Settings) Settings {
 }
 
 func (s Settings) ModelPresent() bool {
-	return s.Default.Model != "" || s.Default.APIKey != "" || s.Default.APIBaseURL != "" || len(s.Default.SystemPrompt) > 0 || len(s.Profiles) > 0
+	return s.Default.Model != "" ||
+		s.Default.APIKey != "" ||
+		s.Default.APIBaseURL != "" ||
+		s.Default.Choices != nil ||
+		s.Default.Temperature != nil ||
+		len(s.Default.SystemPrompt) > 0 ||
+		len(s.Profiles) > 0
 }
 
 func mergeProfile(base, overlay ProfileSettings, replaceSystemPrompt bool) ProfileSettings {
@@ -161,10 +171,32 @@ func mergeProfile(base, overlay ProfileSettings, replaceSystemPrompt bool) Profi
 	if overlay.APIBaseURL != "" {
 		base.APIBaseURL = overlay.APIBaseURL
 	}
+	if overlay.Choices != nil {
+		value := *overlay.Choices
+		base.Choices = &value
+	}
+	if overlay.Temperature != nil {
+		value := *overlay.Temperature
+		base.Temperature = &value
+	}
 	if replaceSystemPrompt && len(overlay.SystemPrompt) > 0 {
 		base.SystemPrompt = append([]SystemPromptPatch(nil), overlay.SystemPrompt...)
 	}
 	return base
+}
+
+func resolveChoices(value *int) int {
+	if value == nil || *value <= 0 {
+		return defaultChoices
+	}
+	return *value
+}
+
+func resolveTemperature(value *float64) float64 {
+	if value == nil || *value < 0 {
+		return defaultTemperature
+	}
+	return *value
 }
 
 func applyEnvOverrides(profile ProfileSettings, lookupEnv func(string) (string, bool)) ProfileSettings {

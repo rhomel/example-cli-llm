@@ -29,6 +29,9 @@ func TestCompleteSendsLiteLLMCompatibleRequest(t *testing.T) {
 		if payload["n"] != float64(3) {
 			t.Fatalf("n = %v, want 3", payload["n"])
 		}
+		if payload["temperature"] != 0.9 {
+			t.Fatalf("temperature = %v, want 0.9", payload["temperature"])
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"one"}},{"message":{"content":"two"}},{"message":{"content":"three"}}]}`))
@@ -43,6 +46,7 @@ func TestCompleteSendsLiteLLMCompatibleRequest(t *testing.T) {
 		SystemPrompt: "system",
 		UserPrompt:   "user",
 		N:            3,
+		Temperature:  0.9,
 	})
 	if err != nil {
 		t.Fatalf("Complete() error = %v", err)
@@ -138,6 +142,9 @@ func TestCompleteHandlesSingleChoiceWithoutN(t *testing.T) {
 		}
 		if _, ok := payload["n"]; ok {
 			t.Fatalf("unexpected n in request: %#v", payload)
+		}
+		if _, ok := payload["temperature"]; ok {
+			t.Fatalf("unexpected temperature in request: %#v", payload)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"answer"}}]}`))

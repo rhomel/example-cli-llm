@@ -22,6 +22,7 @@ type Request struct {
 	SystemPrompt string
 	UserPrompt   string
 	N            int
+	Temperature  float64
 }
 
 func NewClient() Client {
@@ -51,6 +52,9 @@ func (c Client) Complete(ctx context.Context, req Request) ([]string, error) {
 	}
 	if req.N > 1 {
 		payload["n"] = req.N
+	}
+	if req.Temperature > 0 {
+		payload["temperature"] = req.Temperature
 	}
 
 	body, err := json.Marshal(payload)

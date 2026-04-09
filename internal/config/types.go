@@ -9,6 +9,8 @@ type ProfileSettings struct {
 	Model        string              `json:"model"`
 	APIKey       string              `json:"api_key"`
 	APIBaseURL   string              `json:"api_base_url"`
+	Choices      *int                `json:"choices"`
+	Temperature  *float64            `json:"temperature"`
 	SystemPrompt []SystemPromptPatch `json:"system_prompt"`
 }
 
@@ -22,5 +24,7 @@ type Runtime struct {
 	Model        string
 	APIKey       string
 	APIBaseURL   string
+	Choices      int
+	Temperature  float64
 	SystemPrompt []SystemPromptPatch
 }

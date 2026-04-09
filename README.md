@@ -142,6 +142,23 @@ Example minimal configuration (e.g. litellm proxy):
 }
 ```
 
+Optional select-mode tuning can also be set in `settings.json`. `choices`
+controls how many completions are requested with `--select`, and
+`temperature` controls how diverse those completions should be. If omitted,
+they default to `3` and `0.9`.
+
+```
+{
+  "default": {
+    "model": "claude-haiku",
+    "api_key": "api-key",
+    "api_base_url": "http://localhost:4000",
+    "choices": 3,
+    "temperature": 0.9
+  }
+}
+```
+
 Additional profiles may be configured under the `profiles` key. The profile's
 settings replace the default settings when defined and the profile is selected.
 Note that even if a custom profile has a complete and valid configuration, if

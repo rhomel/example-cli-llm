@@ -67,11 +67,14 @@ func TestResolveAppliesProfileOverlay(t *testing.T) {
 				"model": "base-model",
 				"api_key": "base-key",
 				"api_base_url": "http://base",
+				"choices": 5,
+				"temperature": 0.7,
 				"system_prompt": [{"method":"append","content":"base"}]
 			},
 			"profiles": {
 				"smart": {
-					"model": "smart-model"
+					"model": "smart-model",
+					"choices": 4
 				}
 			}
 		}`), nil
@@ -88,8 +91,37 @@ func TestResolveAppliesProfileOverlay(t *testing.T) {
 	if runtime.APIKey != "base-key" || runtime.APIBaseURL != "http://base" {
 		t.Fatalf("unexpected inherited config: %+v", runtime)
 	}
+	if runtime.Choices != 4 || runtime.Temperature != 0.7 {
+		t.Fatalf("unexpected select config: %+v", runtime)
+	}
 	if len(runtime.SystemPrompt) != 1 || runtime.SystemPrompt[0].Content != "base" {
 		t.Fatalf("system prompt inheritance failed: %+v", runtime.SystemPrompt)
+	}
+}
+
+func TestResolveAppliesDefaultSelectSettingsWhenOmitted(t *testing.T) {
+	t.Parallel()
+
+	loader := NewLoader()
+	loader.LookupEnv = func(string) (string, bool) { return "", false }
+	loader.HomeDir = func() (string, error) { return "/tmp/none", nil }
+	loader.ReadFile = func(string) ([]byte, error) {
+		return []byte(`{
+			"default": {
+				"api_base_url": "http://localhost:8080"
+			}
+		}`), nil
+	}
+
+	runtime, err := loader.Resolve(context.Background(), "")
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+	if runtime.Choices != 3 {
+		t.Fatalf("Choices = %d, want 3", runtime.Choices)
+	}
+	if runtime.Temperature != 0.9 {
+		t.Fatalf("Temperature = %v, want 0.9", runtime.Temperature)
 	}
 }
 

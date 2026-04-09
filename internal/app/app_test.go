@@ -78,7 +78,7 @@ func TestRunReadsPromptFromArgsAndWritesAnswer(t *testing.T) {
 	if stdout.String() != "date +%s\n" {
 		t.Fatalf("stdout = %q", stdout.String())
 	}
-	if chatStub.req.UserPrompt != "current unix time" || chatStub.req.N != 1 {
+	if chatStub.req.UserPrompt != "current unix time" || chatStub.req.N != 1 || chatStub.req.Temperature != 0 {
 		t.Fatalf("request = %+v", chatStub.req)
 	}
 }
@@ -120,7 +120,7 @@ func TestRunUsesSelectMode(t *testing.T) {
 	var stderr strings.Builder
 	chatStub := &chatClientStub{answers: []string{"one", "two", "three"}}
 	app := Application{
-		ConfigLoader:  configLoaderStub{runtime: config.Runtime{Model: "m", APIKey: "k", APIBaseURL: "http://base"}},
+		ConfigLoader:  configLoaderStub{runtime: config.Runtime{Model: "m", APIKey: "k", APIBaseURL: "http://base", Choices: 4, Temperature: 0.8}},
 		PromptBuilder: promptBuilderStub{prompt: "system"},
 		ChatClient:    chatStub,
 		BuiltinPrompt: "builtin",
@@ -135,8 +135,8 @@ func TestRunUsesSelectMode(t *testing.T) {
 	if stdout.String() != "two\n" {
 		t.Fatalf("stdout = %q", stdout.String())
 	}
-	if chatStub.req.N != 3 {
-		t.Fatalf("request N = %d, want 3", chatStub.req.N)
+	if chatStub.req.N != 4 || chatStub.req.Temperature != 0.8 {
+		t.Fatalf("request = %+v", chatStub.req)
 	}
 	if !strings.Contains(stderr.String(), "1. one") || !strings.Contains(stderr.String(), "select> ") {
 		t.Fatalf("stderr = %q", stderr.String())

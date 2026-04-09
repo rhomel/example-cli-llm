@@ -93,8 +93,10 @@ func (a Application) Run(ctx context.Context, args []string) error {
 	}
 
 	n := 1
+	temperature := 0.0
 	if selectMode {
-		n = 3
+		n = runtime.Choices
+		temperature = runtime.Temperature
 	}
 
 	answers, err := a.ChatClient.Complete(ctx, chat.Request{
@@ -104,6 +106,7 @@ func (a Application) Run(ctx context.Context, args []string) error {
 		SystemPrompt: systemPrompt,
 		UserPrompt:   prompt,
 		N:            n,
+		Temperature:  temperature,
 	})
 	if err != nil {
 		return err
