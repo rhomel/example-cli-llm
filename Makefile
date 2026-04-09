@@ -4,7 +4,7 @@ BINARY := bin/example
 
 build:
 	mkdir -p bin
-	go build -o $(BINARY) .
+	go build -o $(BINARY) ./cmd/example
 
 test:
 	go test ./...

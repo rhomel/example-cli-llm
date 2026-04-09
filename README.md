@@ -4,8 +4,8 @@ Get short and helpful examples and answers with a single CLI command.
 
 # Installation
 
-```
-go install github.com/rhomel/example-cli-llm
+``` 
+go install github.com/rhomel/example-cli-llm/cmd/example@latest
 
 # optional: configure `ef` alias on zsh
 example --config-shell-helper zsh >> ~/.zshrc && source ~/.zshrc
@@ -270,4 +270,3 @@ command selection usable without manual copy-paste:
 # add to .zshrc to create 'ef' alias
 ef() { print -z "$(example -s "$@")" }
 ```
-
