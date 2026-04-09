@@ -77,7 +77,7 @@ func (a Application) Run(ctx context.Context, args []string) error {
 		return a.writeShellHelper(shellHelper)
 	}
 
-	prompt, err := readPrompt(fs.Args(), a.Stdin, a.Stdout)
+	prompt, err := readPrompt(fs.Args(), a.Stdin, a.Stderr)
 	if err != nil {
 		return ExitError{Code: 2, Err: err}
 	}
@@ -132,11 +132,11 @@ func (a Application) writeShellHelper(shell string) error {
 	}
 }
 
-func readPrompt(args []string, stdin io.Reader, stdout io.Writer) (string, error) {
+func readPrompt(args []string, stdin io.Reader, stderr io.Writer) (string, error) {
 	if len(args) > 0 {
 		return strings.TrimSpace(strings.Join(args, " ")), nil
 	}
-	if _, err := fmt.Fprint(stdout, "prompt> "); err != nil {
+	if _, err := fmt.Fprint(stderr, "prompt> "); err != nil {
 		return "", err
 	}
 	reader := bufio.NewReader(stdin)

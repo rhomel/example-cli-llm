@@ -84,6 +84,7 @@ func TestRunReadsPromptInteractively(t *testing.T) {
 	t.Parallel()
 
 	var stdout strings.Builder
+	var stderr strings.Builder
 	chatStub := &chatClientStub{answers: []string{"answer"}}
 	app := Application{
 		ConfigLoader:  configLoaderStub{runtime: config.Runtime{Model: "m", APIKey: "k", APIBaseURL: "http://base"}},
@@ -92,14 +93,17 @@ func TestRunReadsPromptInteractively(t *testing.T) {
 		BuiltinPrompt: "builtin",
 		Stdin:         strings.NewReader("what is apple in japanese?\n"),
 		Stdout:        &stdout,
-		Stderr:        &strings.Builder{},
+		Stderr:        &stderr,
 	}
 
 	if err := app.Run(context.Background(), nil); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if !strings.HasPrefix(stdout.String(), "prompt> ") {
+	if stdout.String() != "answer\n" {
 		t.Fatalf("stdout = %q", stdout.String())
+	}
+	if stderr.String() != "prompt> " {
+		t.Fatalf("stderr = %q", stderr.String())
 	}
 	if chatStub.req.UserPrompt != "what is apple in japanese?" {
 		t.Fatalf("request = %+v", chatStub.req)
